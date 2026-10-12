@@ -70,6 +70,6 @@ jOOQ 생성 코드는 커밋되지 않으며, 빌드 시점에 만들어진다:
 
 ## Git 규칙
 
-- 커밋 메시지 템플릿: `.gitmessage.txt` — `<type>(<scope>): <subject>` 형식(제목 50자, 본문 72자 줄바꿈, 명령형·소문자 시작·마침표 없음). type 예: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `build` 등.
+- 커밋 메시지 템플릿: `.gitmessage.txt` — `<emoji> <type>(<scope>): <subject>` 형식(제목 50자, 본문 72자 줄바꿈, 명령형·소문자 시작·마침표 없음). 제목 앞에 `.gitmessage.txt`의 type 목록에 있는 이모지를 붙인다(예: `✨ feat`, `🐛 fix`, `📝 docs`, `🔨 build`, `⬆️ upgrade`).
 - `.githooks/commit-msg` (`git config core.hooksPath .githooks`로 활성화)가 브랜치명 앞의 이슈 번호(`12-add-x`, `feature/12-add-x`)를 `Refs: #12` 푸터로 자동 추가한다. 직접 넣을 필요 없다.
 - PR은 `.github/PULL_REQUEST_TEMPLATE.md` 형식을 따른다.
