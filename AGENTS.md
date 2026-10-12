@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 개요
 
-reflectoring.io의 "컴포넌트 기반 아키텍처" 예제 프로젝트(Kotlin + Spring Boot 3.0, Java 17, Gradle 7.6 멀티모듈). 레이어가 아니라 패키지 경계(`api` / `internal`)로 컴포넌트를 나누고, 그 경계를 ArchUnit 테스트 하나로 강제하는 것이 핵심이다.
+reflectoring.io의 "컴포넌트 기반 아키텍처" 예제 프로젝트(Kotlin 2.4 + Spring Boot 3.5, Java 17, Gradle 9.8 멀티모듈). 레이어가 아니라 패키지 경계(`api` / `internal`)로 컴포넌트를 나누고, 그 경계를 ArchUnit 테스트 하나로 강제하는 것이 핵심이다.
 
 ## 명령어
 

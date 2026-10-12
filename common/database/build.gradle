@@ -19,6 +19,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
 
     implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
 }
 
 /**
@@ -40,6 +41,9 @@ flyway {
 }
 
 jooq {
+    // use the jOOQ version managed by the Spring Boot BOM
+    version = dependencyManagement.importedProperties['jooq.version']
+
     configurations {
         main {
             generationTool {
