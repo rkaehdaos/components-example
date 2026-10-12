@@ -1,0 +1,71 @@
+#!/bin/sh
+#
+# commit-msg — 브랜치명 앞머리의 이슈 번호를 "Refs: #N" 푸터로 자동 삽입한다.
+#
+# 인식하는 브랜치명: "<번호>-<설명>" 또는 "<접두사>/<번호>-<설명>"
+#   1-implementing-the-domain-model  ->  Refs: #1
+#   feature/12-add-adapter           ->  Refs: #12
+#
+# 다음 경우에는 메시지를 건드리지 않는다:
+#   - 브랜치명에서 이슈 번호를 뽑을 수 없을 때 (main, detached HEAD, rebase 중 등)
+#   - 메시지 본문에 이미 그 이슈 번호가 있을 때
+#   - 본문이 비어 있을 때 (git이 빈 메시지로 커밋을 중단하도록 그대로 둔다)
+#   - 머지 커밋일 때
+#
+# 설치: git config core.hooksPath .githooks
+
+msg_file=$1
+
+merge_head=$(git rev-parse --git-path MERGE_HEAD 2>/dev/null)
+if [ -n "$merge_head" ] && [ -f "$merge_head" ]; then
+	exit 0
+fi
+
+branch=$(git symbolic-ref --quiet --short HEAD) || exit 0
+
+short=${branch##*/}
+case "$short" in
+*-*) issue=${short%%-*} ;;
+*) exit 0 ;;
+esac
+case "$issue" in
+'' | *[!0-9]*) exit 0 ;;
+esac
+
+comment_char=$(git config --get core.commentChar)
+case "$comment_char" in
+'' | auto) comment_char='#' ;;
+esac
+
+tmp_file="$msg_file.refs.$$"
+
+# 주석/빈 줄을 뺀 마지막 줄 뒤에 푸터를 넣는다. 에디터가 남긴 템플릿 주석은
+# 그대로 아래에 둬야 git이 평소처럼 잘라낸다.
+if awk -v issue="$issue" -v footer="Refs: #$issue" -v cc="$comment_char" '
+	{ line[NR] = $0 }
+	END {
+		pat = "#" issue "([^0-9]|$)"
+		body = 0
+		for (i = 1; i <= NR; i++) {
+			if (substr(line[i], 1, 1) == cc) continue
+			if (line[i] ~ /^[ \t]*$/) continue
+			if (line[i] ~ pat) found = 1
+			body = i
+		}
+		if (body == 0 || found) {
+			for (i = 1; i <= NR; i++) print line[i]
+			exit
+		}
+		for (i = 1; i <= NR; i++) {
+			if (i == body + 1) { print ""; print footer }
+			print line[i]
+		}
+		if (body == NR) { print ""; print footer }
+	}
+' "$msg_file" >"$tmp_file"; then
+	mv "$tmp_file" "$msg_file"
+else
+	rm -f "$tmp_file"
+fi
+
+exit 0
