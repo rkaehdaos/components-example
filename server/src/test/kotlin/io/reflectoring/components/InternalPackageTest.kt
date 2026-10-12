@@ -33,7 +33,7 @@ class InternalPackageTest {
     private fun internalPackages(basePackage: String): List<String> {
         val scanner = SubTypesScanner(false);
         val reflections = Reflections(basePackage, scanner)
-        return reflections.getSubTypesOf(Object::class.java).map {
+        return reflections.getSubTypesOf(Any::class.java).map {
             it.`package`.name
         }.filter {
             it.endsWith(".internal")
