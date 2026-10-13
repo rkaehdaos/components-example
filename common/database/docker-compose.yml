@@ -1,5 +1,3 @@
-version: '3.3'
-
 services:
 
   postgres:
@@ -12,13 +10,19 @@ services:
         "-c", "log_duration=off",
     ]
     volumes:
-      - components-jooq-data:/var/lib/postgresqljooq/data
+      - components-jooq-data:/var/lib/postgresql/data
     ports:
       - 5431:5432
     environment:
       - POSTGRES_USER=components
       - POSTGRES_PASSWORD=components
       - POSTGRES_DB=components
+    healthcheck:
+      # -h forces TCP so the socket-only server used during initdb is not reported as ready
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U components -d components"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
     restart: always
 
 volumes:
