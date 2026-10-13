@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
@@ -11,8 +10,6 @@ buildscript {
 		flywayPluginVersion = '13.10.0'
 	}
 	dependencies {
-		// opening all Kotlin classes by default so that Spring can do its proxy magic
-		classpath "org.jetbrains.kotlin:kotlin-allopen:${kotlinVersion}"
 		// the Flyway Gradle plugin only discovers database support on its own classpath
 		classpath "org.flywaydb:flyway-database-postgresql:${flywayPluginVersion}"
 	}
@@ -24,8 +21,9 @@ plugins {
 	// in the subprojects specifically.
 	id 'org.springframework.boot' version "${springBootVersion}" apply false
 	id 'io.spring.dependency-management' version '1.1.7'
-	id 'org.jetbrains.kotlin.jvm' version "${kotlinVersion}"
-	id 'org.jetbrains.kotlin.plugin.spring' version "${kotlinVersion}"
+	id 'org.jetbrains.kotlin.jvm' version "${kotlinVersion}" apply false
+	// opening all Kotlin classes by default so that Spring can do its proxy magic
+	id 'org.jetbrains.kotlin.plugin.spring' version "${kotlinVersion}" apply false
 	id 'org.flywaydb.flyway' version "${flywayPluginVersion}" apply false
 	id 'nu.studer.jooq' version '9.0' apply false
 	id 'com.avast.gradle.docker-compose' version '0.17.21' apply false
@@ -34,17 +32,12 @@ plugins {
 group = 'io.reflectoring'
 version = '0.0.1-SNAPSHOT'
 
-java {
-	sourceCompatibility = JavaVersion.toVersion(javaVersion)
-}
-
 repositories {
 	mavenCentral()
 }
 
 subprojects {
 
-	apply plugin: 'java'
 	apply plugin: 'io.spring.dependency-management'
 	apply plugin: 'java-library'
 	apply plugin: 'org.jetbrains.kotlin.jvm'
@@ -52,9 +45,9 @@ subprojects {
 
 	group = 'io.reflectoring'
 	version = '0.0.1-SNAPSHOT'
-	java {
-		sourceCompatibility = JavaVersion.toVersion(rootProject.javaVersion)
-		targetCompatibility = JavaVersion.toVersion(rootProject.javaVersion)
+	kotlin {
+		// compiles Java and Kotlin with the configured JDK and derives the JVM target from it
+		jvmToolchain(Integer.parseInt(rootProject.javaVersion))
 	}
 
 	repositories {
@@ -95,7 +88,6 @@ subprojects {
 	tasks.withType(KotlinCompile).configureEach {
 		compilerOptions {
 			freeCompilerArgs.add('-Xjsr305=strict')
-			jvmTarget = JvmTarget.fromTarget(rootProject.javaVersion)
 		}
 	}
 
