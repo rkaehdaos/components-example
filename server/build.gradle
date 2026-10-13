@@ -12,9 +12,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.session:spring-session-jdbc'
 
-    // reflections
-    testImplementation 'org.reflections:reflections'
-    testImplementation 'com.tngtech.archunit:archunit-junit5'
+    // architecture tests
+    testImplementation 'com.tngtech.archunit:archunit'
 
     // Fix for M1 processor
     implementation 'io.netty:netty-resolver-dns-native-macos'
