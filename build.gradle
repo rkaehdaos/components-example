@@ -77,8 +77,8 @@ subprojects {
 			dependency 'io.reflectoring:sqs-starter-test:0.0.11'
 
 			// testing
-			dependency 'org.mockito.kotlin:mockito-kotlin:4.0.0'
-			dependency 'com.tngtech.archunit:archunit:0.21.0'
+			dependency 'org.mockito.kotlin:mockito-kotlin:5.4.0'
+			dependency 'com.tngtech.archunit:archunit:1.5.1'
 
 		}
 	}
