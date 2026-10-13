@@ -62,18 +62,18 @@ internal 패키지의 이름 규칙을 제대로 지킨다면, _이 테스트 �
 | `./gradlew build` | 예제 프로젝트를 빌드한다 |
 | `./gradlew bootRun` | Spring Boot 앱을 실행한다 (⚠️ datasource가 제대로 설정되지 않아 현재는 동작하지 않음) |
 | `./gradlew generateJooq` | Flyway 스크립트로부터 JOOQ 데이터 접근 클래스를 생성한다 |
-| `./gradlew composeDownForced` | JOOQ가 사용하는 PostgreSQL Docker 이미지를 제거한다 (Flyway 오류가 날 때 실행) |
+| `./gradlew composeDownForced` | JOOQ가 사용하는 PostgreSQL Docker 컨테이너와 데이터 볼륨을 제거해 로컬 데이터베이스를 초기화한다 (Flyway 오류가 날 때 실행) |
 
 ## 예제 코드베이스에 대한 논의
 
 이 예제 코드베이스에서 짚어 볼 점은 다음과 같습니다.
 
-- `server` Maven 모듈에는 모든 컴포넌트를 의존성으로 불러오는 Spring Boot 애플리케이션이 들어 있습니다.
-- `components` 폴더에는 컴포넌트마다 하나의 Maven 모듈이 있습니다(현재는 최상위 컴포넌트가 하나뿐이지만).
-- 이 코드베이스에서 `check-engine` 컴포넌트는 자체 Maven 모듈에 있습니다. 컴포넌트가 고유한 패키지 이름만 가진다면 모든 코드를 하나의 Maven 모듈에 넣는 방식을 택할 수도 있었습니다. 다만 컴포넌트를 자체 Maven 모듈로 분리하면 컴포넌트 경계가 더 뚜렷해집니다.
+- `server` Gradle 모듈에는 모든 컴포넌트를 의존성으로 불러오는 Spring Boot 애플리케이션이 들어 있습니다.
+- `components` 폴더에는 컴포넌트마다 하나의 Gradle 모듈이 있습니다(현재는 최상위 컴포넌트가 하나뿐이지만).
+- 이 코드베이스에서 `check-engine` 컴포넌트는 자체 Gradle 모듈에 있습니다. 컴포넌트가 고유한 패키지 이름만 가진다면 모든 코드를 하나의 Gradle 모듈에 넣는 방식을 택할 수도 있었습니다. 다만 컴포넌트를 자체 Gradle 모듈로 분리하면 컴포넌트 경계가 더 뚜렷해집니다.
 - 이 코드베이스는 Kotlin을 사용합니다. Java 코드베이스에서도 거의 같은 방식으로 동작합니다.
 - 컴포넌트 경계에서 중요한 점은 컴포넌트끼리 데이터베이스를 공유하지 않는다는 것입니다. 데이터베이스를 공유하면 데이터 레이어를 통해 결합되고, 이는 금세 모든 레이어에 걸친 강한 결합으로 이어집니다. 예제 코드에서는 `io.reflectoring.components.checkengine.internal.database` 패키지로 정의된 하위 컴포넌트만이 check-engine의 데이터베이스 테이블에 직접 접근합니다.
-- 이 예제는 Flyway로 필요한 데이터베이스 스키마를 생성하고 갱신합니다([common/database](common/database) Maven 모듈 참고). 이 모듈에는 모든 컴포넌트의 데이터베이스 스크립트가 들어 있습니다(이 예제 저장소에는 `check-engine`이라는 컴포넌트 하나뿐이지만). 즉, 모든 컴포넌트가 하나의 데이터베이스 스키마를 공유하되 서로 다른 테이블을 사용하게 됩니다. 컴포넌트 간 데이터를 더 강하게 분리하는 다른 방법(컴포넌트별 스키마, 컴포넌트별 데이터베이스 등)도 있습니다.
+- 이 예제는 Flyway로 필요한 데이터베이스 스키마를 생성하고 갱신합니다([common/database](common/database) Gradle 모듈 참고). 이 모듈에는 모든 컴포넌트의 데이터베이스 스크립트가 들어 있습니다(이 예제 저장소에는 `check-engine`이라는 컴포넌트 하나뿐이지만). 즉, 모든 컴포넌트가 하나의 데이터베이스 스키마를 공유하되 서로 다른 테이블을 사용하게 됩니다. 컴포넌트 간 데이터를 더 강하게 분리하는 다른 방법(컴포넌트별 스키마, 컴포넌트별 데이터베이스 등)도 있습니다.
 - 이 예제는 데이터 접근 레이어에 JOOQ를 사용하며, JOOQ의 소스 생성 기능을 활용합니다.
   - 빌드 중에 [common/database](common/database) 모듈이 PostgreSQL Docker 컨테이너를 띄웁니다.
   - 그다음 Flyway가 [데이터베이스 스크립트](common/database/src/main/resources/db)로 그 PostgreSQL 인스턴스에 데이터베이스 스키마를 생성합니다.

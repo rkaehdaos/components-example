@@ -3,14 +3,15 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 buildscript {
 	ext {
 		javaVersion = '17'
-		springBootVersion = '3.0.5'
-		kotlinVersion = '1.7.22'
+		springBootVersion = '3.5.16'
+		kotlinVersion = '2.4.21'
 		awsJavaSdkVersion = '1.11.739'
-		testcontainersVersion = '1.16.2'
+		// Gradle plugin only (build-time migrations); the runtime Flyway version is managed by Spring Boot
+		flywayPluginVersion = '13.10.0'
 	}
 	dependencies {
-		// opening all Kotlin classes by default so that Spring can do its proxy magic
-		classpath "org.jetbrains.kotlin:kotlin-allopen:${kotlinVersion}"
+		// the Flyway Gradle plugin only discovers database support on its own classpath
+		classpath "org.flywaydb:flyway-database-postgresql:${flywayPluginVersion}"
 	}
 }
 
@@ -19,17 +20,17 @@ plugins {
 	// "apply false" means that the plugin is no applied by default and has to be activated
 	// in the subprojects specifically.
 	id 'org.springframework.boot' version "${springBootVersion}" apply false
-	id 'io.spring.dependency-management' version '1.1.0'
-	id 'org.jetbrains.kotlin.jvm' version "${kotlinVersion}"
-	id 'org.jetbrains.kotlin.plugin.spring' version "${kotlinVersion}"
-	id 'org.flywaydb.flyway' version '8.0.0-beta3' apply false
-	id 'nu.studer.jooq' version '8.1' apply false
-	id 'com.avast.gradle.docker-compose' version '0.14.9' apply false
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.jetbrains.kotlin.jvm' version "${kotlinVersion}" apply false
+	// opening all Kotlin classes by default so that Spring can do its proxy magic
+	id 'org.jetbrains.kotlin.plugin.spring' version "${kotlinVersion}" apply false
+	id 'org.flywaydb.flyway' version "${flywayPluginVersion}" apply false
+	id 'nu.studer.jooq' version '9.0' apply false
+	id 'com.avast.gradle.docker-compose' version '0.17.21' apply false
 }
 
 group = 'io.reflectoring'
 version = '0.0.1-SNAPSHOT'
-sourceCompatibility = "$javaVersion"
 
 repositories {
 	mavenCentral()
@@ -37,7 +38,6 @@ repositories {
 
 subprojects {
 
-	apply plugin: 'java'
 	apply plugin: 'io.spring.dependency-management'
 	apply plugin: 'java-library'
 	apply plugin: 'org.jetbrains.kotlin.jvm'
@@ -45,8 +45,10 @@ subprojects {
 
 	group = 'io.reflectoring'
 	version = '0.0.1-SNAPSHOT'
-	sourceCompatibility = "${javaVersion}"
-	targetCompatibility = "${javaVersion}"
+	kotlin {
+		// compiles Java and Kotlin with the configured JDK and derives the JVM target from it
+		jvmToolchain(Integer.parseInt(rootProject.javaVersion))
+	}
 
 	repositories {
 		mavenLocal()
@@ -55,9 +57,11 @@ subprojects {
 
 	dependencyManagement {
 		imports {
-			mavenBom("org.springframework.boot:spring-boot-dependencies:${springBootVersion}")
-			mavenBom("com.amazonaws:aws-java-sdk-bom:${awsJavaSdkVersion}")
-			mavenBom("org.testcontainers:testcontainers-bom:${testcontainersVersion}")
+			mavenBom("org.springframework.boot:spring-boot-dependencies:${rootProject.springBootVersion}") {
+				// keep the Kotlin stdlib in line with the Kotlin Gradle plugin
+				bomProperty 'kotlin.version', rootProject.kotlinVersion
+			}
+			mavenBom("com.amazonaws:aws-java-sdk-bom:${rootProject.awsJavaSdkVersion}")
 		}
 
 		dependencies {
@@ -65,15 +69,9 @@ subprojects {
 			dependency 'io.reflectoring:sqs-starter:0.0.11'
 			dependency 'io.reflectoring:sqs-starter-test:0.0.11'
 
-			// jOOQ
-			dependency 'org.jooq:jooq:3.18.2'
-			dependency 'org.jooq:jooq-meta:3.18.2'
-			dependency 'org.jooq:jooq-codegen:3.18.2'
-
 			// testing
-			dependency 'org.reflections:reflections:0.9.10'
-			dependency 'org.mockito.kotlin:mockito-kotlin:4.0.0'
-			dependency 'com.tngtech.archunit:archunit-junit5:0.21.0'
+			dependency 'org.mockito.kotlin:mockito-kotlin:5.4.0'
+			dependency 'com.tngtech.archunit:archunit:1.5.1'
 
 		}
 	}
@@ -84,12 +82,12 @@ subprojects {
 		testImplementation 'org.springframework.boot:spring-boot-starter-test'
 		testImplementation project(':common:testcontainers')
 		testImplementation 'org.mockito.kotlin:mockito-kotlin'
+		testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	}
 
-	tasks.withType(KotlinCompile) {
-		kotlinOptions {
-			freeCompilerArgs = ['-Xjsr305=strict']
-			jvmTarget = '17'
+	tasks.withType(KotlinCompile).configureEach {
+		compilerOptions {
+			freeCompilerArgs.add('-Xjsr305=strict')
 		}
 	}
 

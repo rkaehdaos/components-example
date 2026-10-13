@@ -9,7 +9,6 @@ configurations {
 }
 
 dependencies {
-    flywayMigration 'org.testcontainers:postgresql'
     flywayMigration 'org.postgresql:postgresql'
     jooqGenerator 'org.postgresql:postgresql'
     implementation 'org.postgresql:postgresql'
@@ -19,6 +18,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
 
     implementation 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
 }
 
 /**
@@ -40,6 +40,9 @@ flyway {
 }
 
 jooq {
+    // use the jOOQ version managed by the Spring Boot BOM
+    version = dependencyManagement.importedProperties['jooq.version']
+
     configurations {
         main {
             generationTool {

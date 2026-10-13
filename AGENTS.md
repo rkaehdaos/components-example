@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 개요
 
-reflectoring.io의 "컴포넌트 기반 아키텍처" 예제 프로젝트(Kotlin + Spring Boot 3.0, Java 17, Gradle 7.6 멀티모듈). 레이어가 아니라 패키지 경계(`api` / `internal`)로 컴포넌트를 나누고, 그 경계를 ArchUnit 테스트 하나로 강제하는 것이 핵심이다.
+reflectoring.io의 "컴포넌트 기반 아키텍처" 예제 프로젝트(Kotlin 2.4 + Spring Boot 3.5, Java 17, Gradle 9.8 멀티모듈). 레이어가 아니라 패키지 경계(`api` / `internal`)로 컴포넌트를 나누고, 그 경계를 ArchUnit 테스트 하나로 강제하는 것이 핵심이다.
 
 ## 명령어
 
-JDK 17(`mise.toml`: oracle-graalvm-17)과 **Docker가 필수**다. 모든 명령은 루트에서 실행한다.
+JDK 17(`mise.toml`: oracle-graalvm-17)과 **Docker가 필수**다. 빌드는 `jvmToolchain(17)`을 쓰므로 Gradle을 다른 JDK로 실행하더라도 JDK 17이 설치되어 있어야 한다. 모든 명령은 루트에서 실행한다.
 
 ```bash
 ./gradlew build                      # 전체 빌드 + 테스트
@@ -26,11 +26,15 @@ JDK 17(`mise.toml`: oracle-graalvm-17)과 **Docker가 필수**다. 모든 명령
 
 jOOQ 생성 코드는 커밋되지 않으며, 빌드 시점에 만들어진다:
 
-1. `common/database`의 `docker-compose.yml`이 PostgreSQL 15 컨테이너(`components-jooq`, **localhost:5431**, user/pw/db 모두 `components`)를 띄운다. `stopContainers = false`라서 빌드 후에도 계속 떠 있다.
+1. `common/database`의 `docker-compose.yml`이 PostgreSQL 15 컨테이너(`components-jooq`, **localhost:5431**, user/pw/db 모두 `components`)를 띄우고 healthcheck가 healthy가 될 때까지 기다린다. `stopContainers = false`라서 빌드 후에도 계속 떠 있다.
 2. `flywayMigrate`가 `common/database/src/main/resources/db/migration/` 스크립트를 적용한다.
 3. `generateJooq`가 `public` 스키마를 읽어 `io.reflectoring.components.common.database` 패키지로 클래스를 생성한다.
 
 따라서 **스키마 변경은 `common/database`에 새 Flyway 스크립트(`V00N__*.sql`)를 추가**하는 방식으로 한다. 모든 컴포넌트의 마이그레이션이 이 모듈 한곳에 모이며, 컴포넌트별 하위 디렉터리(`db/migration/check-engine/`)로 구분한다. 이미 적용된 스크립트를 수정하면 로컬 DB checksum 오류가 나므로 `composeDownForced`가 필요하다.
+
+버전 관련 주의:
+- Flyway는 두 버전이 공존한다. 위 2단계(jOOQ 생성용)는 Flyway Gradle 플러그인(`flywayPluginVersion`, 13.x)이 실행하고, 테스트·런타임 마이그레이션은 Spring Boot BOM이 관리하는 Flyway(11.x)가 실행한다. Boot 버전에 맞춘 11.x 플러그인은 Gradle 9에서 동작하지 않기 때문이다.
+- Kotlin 2.4.21이 공식 지원하는 Gradle은 9.7.0까지다. wrapper는 9.8.1이며 빌드·테스트로 검증했다.
 
 ## 아키텍처
 
@@ -48,7 +52,7 @@ jOOQ 생성 코드는 커밋되지 않으며, 빌드 시점에 만들어진다:
 - `common/database` — Flyway 스크립트, jOOQ 코드 생성, `JooqAutoConfiguration`(`DSLContext` 빈).
 - `common/testcontainers` — 테스트용 `@PostgreSQLTest` 메타 애노테이션. 루트 `build.gradle`이 모든 서브프로젝트에 `testImplementation`으로 추가한다.
 
-공통 의존성 버전은 루트 `build.gradle`의 `dependencyManagement`에서 관리한다(Spring Boot BOM, AWS SDK BOM, Testcontainers BOM, jOOQ, `io.reflectoring:sqs-starter` 등).
+공통 의존성 버전은 루트 `build.gradle`의 `dependencyManagement`에서 관리한다. jOOQ, Testcontainers, 런타임 Flyway, Mockito 버전은 Spring Boot BOM이 정한다(Kotlin stdlib은 `bomProperty`로 KGP 버전에 맞춤). 그 밖에 AWS SDK BOM과 `io.reflectoring:sqs-starter`, `mockito-kotlin`, `archunit`의 고정 버전을 둔다.
 
 ### check-engine 내부 구조
 
@@ -70,6 +74,6 @@ jOOQ 생성 코드는 커밋되지 않으며, 빌드 시점에 만들어진다:
 
 ## Git 규칙
 
-- 커밋 메시지 템플릿: `.gitmessage.txt` — `<type>(<scope>): <subject>` 형식(제목 50자, 본문 72자 줄바꿈, 명령형·소문자 시작·마침표 없음). type 예: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `build` 등.
+- 커밋 메시지 템플릿: `.gitmessage.txt` — `<emoji> <type>(<scope>): <subject>` 형식(제목 50자, 본문 72자 줄바꿈, 명령형·소문자 시작·마침표 없음). 제목 앞에 `.gitmessage.txt`의 type 목록에 있는 이모지를 붙인다(예: `✨ feat`, `🐛 fix`, `📝 docs`, `🔨 build`, `⬆️ upgrade`).
 - `.githooks/commit-msg` (`git config core.hooksPath .githooks`로 활성화)가 브랜치명 앞의 이슈 번호(`12-add-x`, `feature/12-add-x`)를 `Refs: #12` 푸터로 자동 추가한다. 직접 넣을 필요 없다.
 - PR은 `.github/PULL_REQUEST_TEMPLATE.md` 형식을 따른다.

@@ -4,8 +4,6 @@ import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.reflections.Reflections
-import org.reflections.scanners.SubTypesScanner
 import java.io.IOException
 
 
@@ -21,6 +19,8 @@ class InternalPackageTest {
         // so that the test will break when the base package is re-named
         assertPackageExists(BASE_PACKAGE)
         val internalPackages = internalPackages(BASE_PACKAGE)
+        // so that the test will break when the scan silently finds nothing
+        assertThat(internalPackages).isNotEmpty()
         for (internalPackage in internalPackages) {
             assertPackageExists(internalPackage)
             assertPackageIsNotAccessedFromOutside(internalPackage)
@@ -31,13 +31,11 @@ class InternalPackageTest {
      * Finds all packages named "internal".
      */
     private fun internalPackages(basePackage: String): List<String> {
-        val scanner = SubTypesScanner(false);
-        val reflections = Reflections(basePackage, scanner)
-        return reflections.getSubTypesOf(Object::class.java).map {
-            it.`package`.name
+        return analyzedClasses.map {
+            it.packageName
         }.filter {
-            it.endsWith(".internal")
-        }
+            it.startsWith(basePackage) && it.endsWith(".internal")
+        }.distinct()
     }
 
     private fun assertPackageIsNotAccessedFromOutside(internalPackage: String) {
